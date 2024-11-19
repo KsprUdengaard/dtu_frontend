@@ -9,6 +9,7 @@ readme = "README.md"
 python = "^3.12"
 streamlit = "^1.40.1"
 requests = "^2.32.3"
+plotly = "^5.24.1"
 
 
 [build-system]
