@@ -2,7 +2,7 @@ import streamlit as st
 import plotly.express as px
 import requests
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def fetch_weather_data(parameter, start_date, end_date, resolution, data_limit, weather_url):
 	if start_date > end_date:
@@ -26,7 +26,7 @@ def fetch_weather_data(parameter, start_date, end_date, resolution, data_limit, 
 		data = response.json()['data']['features']
 		x_data = [feature['properties']['from'][:13] for feature in data]
 		y_data = [feature['properties']['value'] for feature in data]
-		df = pd.DataFrame({'Date': x_data, 'Value': y_data})
+		df = pd.DataFrame({'Time': x_data, 'Value': y_data})
 		return df
 	else:
 		st.error(f'Failed to send request, Status code {response.status_code}')
@@ -43,7 +43,7 @@ def plot_weather_data(df, plot_type, y_axis_label, title):
 	}
 
 	if plot_type in plot_functions:
-		fig = plot_functions[plot_type](df, x='Date', y='Value', title=title)
+		fig = plot_functions[plot_type](df, x='Time', y='Value', title=title)
 		fig.update_layout(yaxis_title=y_axis_label)
 		st.plotly_chart(fig)
 	else:
@@ -60,26 +60,28 @@ def show():
 	
 	col1, col2, col3 = st.columns(3)
 	with col1:
-		start_date = st.date_input('Start Date', datetime.today(), min_value=datetime(2000, 1, 1)).isoformat()
+		start_date = st.date_input('From Date', datetime.today()-timedelta(days=1), min_value=datetime(2000, 1, 1)).isoformat()
 	with col2:
-		end_date = st.date_input('End Date', datetime.today(), min_value=datetime(2000, 1, 1)).isoformat()
+		end_date = st.date_input('To Date', datetime.today(), min_value=datetime(2000, 1, 1)).isoformat()
 	with col3:
 		resolution = st.selectbox('Choose a resolution', resolutions)
 	
-	st.write('The number of data points is limited to 1000')		
+
+	st.write('<small>*The maximum number of data points that can be requested is limited to 1,000</small>', unsafe_allow_html=True)
+	
 	
 	tabs = ['Humidity', 
-			'Temp',  
+			'Temperature',  
 			'Wind speed', 
-			'Wind direction', 
 			'Pressure', 
 			'Radiation',
 			'Precipitation',
 			'Cloud cover']
 
-	tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(tabs)
+	tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(tabs)
 
 	### Interface ###
+
 	if st.button('Request Data'):
 		with tab1:			
 			st.header('Average humidity [%]')
@@ -92,7 +94,7 @@ def show():
 				data_limit=data_limit,
 				weather_url=weather_url)
 			if df is not None:
-				plot_data(df,plot_type='line',y_axis_label='Humidity [%]', title='Historical Average Humidity')
+				plot_weather_data(df,plot_type='line',y_axis_label='Humidity [%]', title='Historical Average Humidity')
 		
 		with tab2:			
 			st.header('Average temperature [°C]')
@@ -120,20 +122,7 @@ def show():
 			if df is not None:
 				plot_weather_data(df,plot_type='line',y_axis_label='Wind speed [m/s]', title='Historical Average Wind speed')
 
-		with tab4:		
-			st.header('Average wind direction [degrees]')
-			wind_directipon_parameter = 'mean_wind_dir'
-			df = fetch_weather_data(
-				parameter=wind_directipon_parameter,
-				start_date=start_date,
-				end_date=end_date,
-				resolution=resolution,
-				data_limit=data_limit,
-				weather_url=weather_url)
-			if df is not None:
-				plot_weather_data(df,plot_type='line',y_axis_label='Wind direction [degrees]', title='Historical Average Wind direction')
-
-		with tab5:
+		with tab4:
 			st.header('Average pressure [hPa]')
 			pressure_parameter = 'mean_pressure'
 			df = fetch_weather_data(
@@ -146,7 +135,7 @@ def show():
 			if df is not None:
 				plot_weather_data(df,plot_type='line',y_axis_label='Pressure [hPa]', title='Historical Average Pressure')
 
-		with tab6:
+		with tab5:
 			st.header('Average radiation [MJ/m²]')
 			radiation_parameter = 'mean_radiation'
 			df = fetch_weather_data(
@@ -159,7 +148,7 @@ def show():
 			if df is not None:
 				plot_weather_data(df,plot_type='line',y_axis_label='Radiation [MJ/m²]', title='Historical Average Radiation')
 
-		with tab7:
+		with tab6:
 			st.header('Accumulated precipitation [mm]')
 			precipitation_parameter = 'acc_precip'
 			df = fetch_weather_data(
@@ -170,9 +159,9 @@ def show():
 				data_limit=data_limit,
 				weather_url=weather_url)
 			if df is not None:
-				plot_weather_data(df,plot_type='line',y_axis_label='Precipitation [mm]', title='Historical Average Precipitation')
+				plot_weather_data(df,plot_type='bar',y_axis_label='Precipitation [mm]', title='Historical Average Precipitation')
 
-		with tab8:
+		with tab7:
 			st.header('Average cloud cover [%]')
 			cloud_parameter = 'mean_cloud_cover'
 			df = fetch_weather_data(
@@ -185,3 +174,4 @@ def show():
 			if df is not None:
 				plot_weather_data(df,plot_type='line',y_axis_label='Cloud cover [%]', title='Historical Average Cloud cover')
 
+		
