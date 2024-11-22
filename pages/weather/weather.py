@@ -19,7 +19,6 @@ def fetch_weather_data(parameter, start_date, end_date, resolution, data_limit, 
 		'time_from': start_date,
 		'time_to': end_date,
 	}
-
 	response = requests.post(weather_url, json=payload)
 	if response.status_code == 200:
 		# Extract data from the response
@@ -95,6 +94,8 @@ def show():
 				weather_url=weather_url)
 			if df is not None:
 				plot_weather_data(df,plot_type='line',y_axis_label='Humidity [%]', title='Historical Average Humidity')
+			else:
+				st.write('Could not fetch data')
 		
 		with tab2:			
 			st.header('Average temperature [°C]')
@@ -136,7 +137,7 @@ def show():
 				plot_weather_data(df,plot_type='line',y_axis_label='Pressure [hPa]', title='Historical Average Pressure')
 
 		with tab5:
-			st.header('Average radiation [MJ/m²]')
+			st.header('Average radiation [W/m²]')
 			radiation_parameter = 'mean_radiation'
 			df = fetch_weather_data(
 				parameter=radiation_parameter,
@@ -146,7 +147,7 @@ def show():
 				data_limit=data_limit,
 				weather_url=weather_url)
 			if df is not None:
-				plot_weather_data(df,plot_type='line',y_axis_label='Radiation [MJ/m²]', title='Historical Average Radiation')
+				plot_weather_data(df,plot_type='line',y_axis_label='Radiation [W/m²]', title='Historical Average Radiation')
 
 		with tab6:
 			st.header('Accumulated precipitation [mm]')

@@ -30,7 +30,7 @@ def footer(message):
 def main()->None:
     ### Navigation in the sidebar ###
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["About", "Weather Data", "Energy Data", "Price prediction"])
+    page = st.sidebar.radio("Go to", ["About", "Weather Data", "Energy Data", "Forecast"])
     
     if page == "About":
         about_page.show()
@@ -38,7 +38,7 @@ def main()->None:
         weather_page.show()
     elif page == "Energy Data":
         energy_page.show()
-    elif page == "Price prediction":
+    elif page == "Forecast":
         prediction_page.show()
 
     ### Footer ###
