@@ -20,16 +20,16 @@ def fetch_weather_data(parameter, start_date, end_date, resolution, data_limit, 
 		'time_to': end_date,
 	}
 	response = requests.post(weather_url, json=payload)
-	if response.status_code == 200:
-		# Extract data from the response
-		data = response.json()['data']['features']
+	if response.status_code != 200:
+		st.error(f'Failed to send request, Status code {response.status_code}')
+		return None
+	else:
+		data = response.json()
 		x_data = [feature['properties']['from'][:13] for feature in data]
 		y_data = [feature['properties']['value'] for feature in data]
 		df = pd.DataFrame({'Time': x_data, 'Value': y_data})
 		return df
-	else:
-		st.error(f'Failed to send request, Status code {response.status_code}')
-		return None
+		
 
 # Function to plot the data
 def plot_weather_data(df, plot_type, y_axis_label, title):

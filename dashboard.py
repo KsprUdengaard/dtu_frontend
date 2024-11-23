@@ -1,9 +1,9 @@
 import streamlit as st
 import requests
-import pages.about.about as about_page
-import pages.weather.weather as weather_page
-import pages.energy.energy as energy_page
-import pages.prediction.prediction as prediction_page
+import about_page
+import weather_page
+import energy_page
+import prediction_page
 
 def footer(message):
     return st.markdown(f"""
