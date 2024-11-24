@@ -1,84 +1,137 @@
 import pandas as pd
 import requests
 from datetime import datetime, timedelta
+from abc import ABC, abstractmethod
 
-class DMI_Forecast:
-	def __init__(self, coords: str, parameter: str):
-			self.coords = coords
-			self.parameter = parameter
-			self.json_data = None
-			self.forecast_df = None
-
-	def fetch_data(self, forecast_url:str)->None:
-		payload = {
-			'coords': self.coords,
-			'crs': 'crs84',
-			'parameter': self.parameter,
-		}
-
-		response = requests.get(forecast_url, json=payload)
+class ApiFetcher:
+	@staticmethod
+	def fetch_data(url, payload)->dict:	
+		response = requests.post(url, json=payload)
 		if response.status_code != 200:
-			raise Exception(f"Error: {response.status_code} - {response.text}")
-		self.json_data = response.json()
-
-	def process_data(self, unit:str)->pd.DataFrame:
-		timestamps = self.json_data.get('domain', {}).get('axes', {}).get('t', {}).get('values', [])
-		values = self.json_data.get('ranges', {}).get(self.parameter, {}).get('values', [])
-
-		# Return as DataFrame if both timestamps and values exist
-		if timestamps and values:
-			self.forecast_df = pd.DataFrame({self.parameter: values}, index=timestamps)
-			self.forecast_df[self.parameter] = self.forecast_df[self.parameter].apply(self.conversion_lambda)
-			self.forecast_df.index.name = "HourUTC"
-			self.forecast_df.columns = [f'{self.parameter} - {unit}']
-			return self.forecast_df
-		else:
-			raise Exception("Error: Missing data for timestamps or values.")
-
-class DMI_Historical_data:
-	def __init__(self, parameter:str, start_date:str, end_date:str, data_limit:int):
-		self.start_date=start_date
-		self.end_date=end_date
-		self.data_limit=data_limit
-		self.resolution="hour"
-		self.parameter=parameter
-		self.json_data = None
-		self.historical_df = None
-
-	def fetch_weather_data(self, weather_url:str)->None:
-		payload = {
-			'parameter': self.parameter,
-			'limit': self.data_limit,
-			'resolution': self.resolution,
-			'time_from': self.start_date,
-			'time_to': self.end_date
-		}
-		response = requests.post(weather_url, json=payload)
-		if response.status_code != 200:
+			print(response.status_code)
 			print(response.text)
-			#st.error(f'Failed to send request, Status code {response.status_code}')
 			return None	
 		else:
-			self.json_data = response.json()
+			print(response.status_code)
+			return response.json()
 
-	def process_data(self)->pd.DataFrame:
-		if not self.json_data:
-			print('No data available') 
+class DataProcessor(ABC):
+	@abstractmethod
+	def process_data(jsonData: dict)->pd.DataFrame:
+		pass
+
+class HistoricalDataProcessor(DataProcessor):
+	@staticmethod
+	def process_data(jsonData: dict)->pd.DataFrame:
+		if not jsonData:
+			raise Exception("Error: Missing json data")
+			return None  # Explicit return for empty or invalid data
 		else:
-			x_data = [feature['properties']['from'][:13] for feature in self.json_data]
-			y_data = [feature['properties']['value'] for feature in self.json_data]
-			self.historical_df = pd.DataFrame({'Time': x_data, 'Value': y_data})
-			return self.historical_df
+			timestamps = [feature['properties']['from'][:13] for feature in jsonData]
+			y_data = [feature['properties']['value'] for feature in jsonData]
+		if not timestamps and y_data:
+			raise Exception("Error: Missing data for timestamps or values.")
+		else:
+			df = pd.DataFrame({'value':y_data}, index=timestamps)
+			df.index.name = "HourUTC"
+			#{'Time': x_data, 'Value': y_data}
+			return df
 
+class ForecastDataProcessor(DataProcessor):
+	@staticmethod
+	def process_data(jsonData:dict)->pd.DataFrame:	
+		if not jsonData:
+			raise Exception("Error: Missing json data")
+			return None
+		else:
+			parameter = list(jsonData['parameters'].keys())[0]
+			timestamps = jsonData.get('domain', {}).get('axes', {}).get('t', {}).get('values', [])
+			spliced_timestamps = [s[:13] for s in timestamps]
+			values = jsonData.get('ranges', {}).get(parameter).get('values', [])
+		if not timestamps and values:
+			raise Exception("Error: Missing data for timestamps or values.")
+			return None
+		else:
+			df = pd.DataFrame({parameter: values}, index=spliced_timestamps)
+			df.index.name = "HourUTC"
+			return df
+
+class DataContainer:
+	def __init__(self, url:str, payload:str, apiFetcher:ApiFetcher, dataProcessor:DataProcessor):
+		self.url:str = url
+		self.payload:dict = payload
+		self.apiFetcher:ApiFetcher = apiFetcher
+		self.dataProcessor:DataProcessor = dataProcessor
+		self.df:pd.DataFrame=None
+
+	def create_data(self):
+		json_data = self.apiFetcher.fetch_data(self.url, self.payload)
+		if json_data is None:
+			print("No data available")
+		else:
+			self.df = self.dataProcessor.process_data(json_data)
+
+
+
+
+### TEST AREA ###
 def main()->None:
-	start_date = (datetime.today()-timedelta(days=5)).isoformat()[:10]
-	end_date = datetime.today().isoformat()[:10]
-	weather_url = "http://127.0.0.1:8000/weather"
-	parameter = 'mean_pressure'
-	hist_data = DMI_Historical_data(parameter, start_date, end_date, 120)
-	hist_data.fetch_weather_data(weather_url)
-	hist_data.process_data()
-	print(hist_data.historical_df)
+	apiFetcher = ApiFetcher()
+	historicalProcessor = HistoricalDataProcessor()
+	forecastProcessor = ForecastDataProcessor()
 
+	weather_url = "http://127.0.0.1:8000/weather"
+	historical_parameters = [
+							'mean_relative_hum',
+							'mean_temp', 
+							'mean_wind_speed', 
+							'mean_pressure', 
+							'mean_radiation', 
+							'acc_precip', 
+							'mean_cloud_cover']
+	historical_forecasts = []
+	for parameter in historical_parameters:
+		payload={
+				'parameter':parameter,
+				'limit': 120,
+				'resolution': 'hour',
+				'time_from': (datetime.today()-timedelta(days=5)).isoformat()[:10],
+				'time_to': datetime.today().isoformat()[:10]
+				}
+		historical_forecast_container = DataContainer(weather_url, payload, apiFetcher, historicalProcessor) 
+		historical_forecast_container.create_data()
+		historical_forecasts.append(historical_forecast_container)
+
+	for forecast in historical_forecasts:
+		print(forecast.payload['parameter'])	
+
+	#forecast_url = 'http://127.0.0.1:8000/forecast'
+	#coords = 'POINT(9.5 56.0)'
+	#edr_parameters = [
+	#					'relative-humidity-2m',  # mean_relative_hum
+    #					'temperature-2m',        # mean_temp
+    #					'wind-speed-10m',        # mean_wind_speed
+    #					'pressure-surface',  # mean_pressure
+    #					'direct-solar-exposure',       # mean_radiation
+    #					'total-precipitation', # acc_precip
+    #					'high-cloud-cover',
+    #					'medium-cloud-cover',
+    #					'low-cloud-cover'           # mean_cloud_cover
+	#					]
+	#forecasts = []
+	#for parameter in edr_parameters:
+	#	payload={
+	#			'coords':coords,
+	#			'crs':'crs84',
+	#			'parameter':parameter
+	#			}
+	#	forecast_container = DataContainer(forecast_url, payload, apiFetcher,forecastProcessor)
+	#	forecast_container.create_data()
+	#	forecasts.append(forecast_container)
+#
+	#for forecast in forecasts:
+	#	print(forecast.payload['parameter'])
+		
+							
 if __name__ =='__main__':
 	main()
