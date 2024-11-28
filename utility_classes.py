@@ -80,6 +80,8 @@ class ForecastDataProcessor(DataProcessor):
 		return df_transformed
 
 
+
+
 class DataContainer:
 	def __init__(self, url:str=None, payload:str=None, apiFetcher:ApiFetcher=None, dataProcessor:DataProcessor=None, transformer:Transformer=None):
 		self.url:str = url
