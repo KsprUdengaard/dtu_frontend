@@ -4,7 +4,7 @@ import plotly.express as px
 from datetime import datetime, timedelta
 from utility_classes import *
 
-def plot_data(history_df:pd.DataFrame, forecast_df:pd.DataFrame, plot_type:str, y_axis_label:str, title:str):
+def plot_data(weather_data:dict, forecast_data:dict, plot_type:str, y_axis_label:str, title:str):
 	plot_functions = {
 		'line': px.line,
 		'scatter': px.scatter,
@@ -12,108 +12,112 @@ def plot_data(history_df:pd.DataFrame, forecast_df:pd.DataFrame, plot_type:str, 
 		'box': px.box,
 		'histogram': px.histogram
 	}
-	if history_df is None or forecast_df is None:
-		st.write(f"Missing either historical- or forecast data for **{title}**")
+
+	weather_df = pd.DataFrame(weather_data)
+	weather_df["Source"] = "Historical"
+	forecast_df = pd.DataFrame(forecast_data)
+	forecast_df["Source"] = "Future"
+	combined_df = pd.concat([weather_df, forecast_df])
+
+	if plot_type in plot_functions:
+		fig = plot_functions[plot_type](
+			combined_df,
+			x="timestamps",
+			y="values",
+			color="Source", 
+			title=title,
+			labels={'timestamps':'Time (UTC)',
+					'values':y_axis_label,
+					'source':'Data Type'
+					})	
+		st.plotly_chart(fig)
 	else:
-		history_df["Source"] = "Historical"
-		forecast_df["Source"] = "Future"
-		combined_df = pd.concat([history_df, forecast_df])
-		if plot_type in plot_functions:
-			fig = plot_functions[plot_type](
-				combined_df,
-				color="Source", 
-				title=title)	
-			fig.update_layout(yaxis_title=y_axis_label)
-			st.plotly_chart(fig)
-		else:
-			st.error(f"Unsupported plot type: {plot_type}")
+		st.error(f"Unsupported plot type: {plot_type}")
 
 def show():
-
 	st.title("Forecast")
 	st.write('This forecast show weather and energy spot prices from the past five days and forcast for the coming two days')
 	st.markdown("---")
+	st.write('Forecast')
 		### Variables ###
-	apiFetcher = ApiFetcher()
-	historicalProcessor = HistoricalDataProcessor()
-	forecastProcessor = ForecastDataProcessor()
-	data_transformer = Transformer()
 	weather_url = "http://127.0.0.1:8000/weather"
-	resolutions = ['hour', 'day', 'month', 'year']	
-	data_limit = 1000
+	resolutions = 'hour'	
+	data_limit = 120
 	forecast_url = 'http://127.0.0.1:8000/forecast'
 	coords = 'POINT(9.5 56.0)'
-	historical_parameters = [
-   		{"header": "Average humidity [%]", "parameter": "mean_relative_hum",'edr_parameter':'relative-humidity-2m', "y_axis_label": "Humidity [%]", "plot_type": "line"},
-   		{"header": "Average temperature [°C]", "parameter": "mean_temp",'edr_parameter':'temperature-2m', "y_axis_label": "Temperature [°C]", "plot_type": "line"},
-   		{"header": "Average wind speed [m/s]", "parameter": "mean_wind_speed",'edr_parameter':'wind-speed-10m', "y_axis_label": "Wind speed [m/s]", "plot_type": "line"},
-   		{"header": "Average pressure [hPa]", "parameter": "mean_pressure",'edr_parameter':'pressure-surface', "y_axis_label":'pressure-surface' "Pressure [hPa]", "plot_type": "line"},
-   		{"header": "Average radiation [W/m²]", "parameter": "mean_radiation",'edr_parameter':'global-radiation-flux',"y_axis_label": "Radiation [W/m²]", "plot_type": "line"},
-   		{"header": "Accumulated precipitation [mm]", "parameter": "acc_precip",'edr_parameter':'total-precipitation', "y_axis_label": "Precipitation [mm]", "plot_type": "bar"},
-   		{"header": "Average cloud cover [%]","parameter": "mean_cloud_cover",'edr_parameter':'',"y_axis_label": "Cloud cover [%]","plot_type": "line"}
+	tab_data = [
+   		{"title": "Humidity", "parameter": "mean_relative_hum",'edr_parameter':'relative-humidity-2m', "y_axis_label": "Humidity [%]", "plot_type": "line"},
+   		{"title": "Temperature", "parameter": "mean_temp",'edr_parameter':'temperature-2m', "y_axis_label": "Temperature [°C]", "plot_type": "line"},
+   		{"title": "Wind speed", "parameter": "mean_wind_speed",'edr_parameter':'wind-speed-10m', "y_axis_label": "Wind speed [m/s]", "plot_type": "line"},
+   		{"title": "Pressure ", "parameter": "mean_pressure",'edr_parameter':'pressure-surface', "y_axis_label": "Pressure [hPa]", "plot_type": "line"},
+   		{"title": "Radiation", "parameter": "mean_radiation",'edr_parameter':'global-radiation-flux',"y_axis_label": "Radiation [W/m²]", "plot_type": "line"},
+   		{"title": "Acc precipitation", "parameter": "acc_precip",'edr_parameter':'total-precipitation', "y_axis_label": "Precipitation [mm]", "plot_type": "bar"},
+   		{"title": "Cloud cover","parameter": "mean_cloud_cover",'edr_parameter':'',"y_axis_label": "Cloud cover [%]","plot_type": "line"}
 	]
-	historical_forecasts = []
-	predictive_forecasts=[]
-	for parameter in historical_parameters:
-		with st.spinner(f'Fetching {parameter['header']} data'):
+
+	tabs =st.tabs([tab['title'] for tab in tab_data])
+
+	weather_payloads = {'items':[]}
+	forecast_payloads = {'items':[]}
+	
+	#with st.spinner(f'Fetching {tab['title']} data'):
+	for tab in tab_data:	
+		if tab['parameter']=='mean_cloud_cover':
+			pass
+		else:
 			historical_payload={
-					'parameter':parameter['parameter'],
-					'limit': 120,
+					'parameter':tab['parameter'],
+					'limit': data_limit,
 					'resolution': 'hour',
 					'time_from': (datetime.today()-timedelta(days=5)).isoformat()[:10],
 					'time_to': datetime.today().isoformat()[:10]
 					}
-			historical_forecast_container = DataContainer(url=weather_url, 
-														payload=historical_payload, 
-														apiFetcher=apiFetcher, 
-														dataProcessor=historicalProcessor, 
-														transformer=data_transformer) 
-			historical_forecast_container.create_data()
-			historical_forecasts.append(historical_forecast_container)
-			if parameter['parameter']=='mean_cloud_cover':
-				pass
+			weather_payloads['items'].append(historical_payload)
+			forecast_payload={
+					'coords':coords,
+					'crs':'crs84',
+					'parameter':tab['edr_parameter']
+					}
+		forecast_payloads['items'].append(forecast_payload)
+	weather_data = ApiFetcher.fetch_data(weather_url, weather_payloads)
+	forecast_data = ApiFetcher.fetch_data(forecast_url, forecast_payloads)
+	for idx, tab in enumerate(tabs):
+		with tab:
+			if 'Server Error' in forecast_data:
+				st.write('Cannot plot data due to forecast data timeout - try and refresh')
 			else:
-				forecaste_payload={
-						'coords':coords,
-						'crs':'crs84',
-						'parameter':parameter['edr_parameter']
-						}
-				forecast_container = DataContainer(url=forecast_url, 
-										payload=forecaste_payload, 
-										apiFetcher=apiFetcher,
-										dataProcessor=forecastProcessor,
-										transformer=data_transformer)
-				forecast_container.create_data()
-				predictive_forecasts.append(forecast_container)
-
-	with st.spinner(f'Fetching {parameter['header']} data'):
-		cloud_cover_parameters = ['high-cloud-cover','medium-cloud-cover','low-cloud-cover']
-		cloud_data_dataframes=[]
-		for parameter in cloud_cover_parameters:
-			cloud_payload={'coords':coords,'crs':'crs84','parameter':parameter}
-			data = apiFetcher.fetch_data(forecast_url, cloud_payload)
-			processed_data=forecastProcessor.process_data(data, data_transformer)
-			processed_data = processed_data.rename(columns={parameter: 'value'})
-			cloud_data_dataframes.append(processed_data)
-		
-		mean_cloud_cover = sum(cloud_data_dataframes)/len(cloud_data_dataframes)
-		mean_cloud_cover = mean_cloud_cover.rename(columns={'value': 'mean_cloud_cover'})
-		cloud_container = DataContainer()
-		cloud_container.df = round(mean_cloud_cover, 1)
-		predictive_forecasts.append(cloud_container)
-		
-	### UI ###
-	
-	for i, parameter in enumerate(historical_parameters):
-		if historical_forecasts[i].df is None or predictive_forecasts[i].df is None:
-			st.markdown("---")
-			st.write(f'Could not fetch **{parameter['header']}** data')
-			pass
-		else:
-			plot_data(history_df=historical_forecasts[i].df, 
-					  forecast_df=predictive_forecasts[i].df,
-					  plot_type=parameter['plot_type'],
-					  y_axis_label=parameter['y_axis_label'],
-					  title=parameter['header'])
-
-	st.write('Energy spot price forecast!')		
+				if tab_data[idx]['parameter'] =='mean_cloud_cover':
+					cloud_payload={
+								'parameter':tab_data[idx]['parameter'],
+								'limit': data_limit,
+								'resolution': 'hour',
+								'time_from': (datetime.today()-timedelta(days=5)).isoformat()[:10],
+								'time_to': datetime.today().isoformat()[:10]
+								}
+					cloud_data = ApiFetcher.fetch_data(weather_url, cloud_payload)
+					cloud_forecast_list = ['high-cloud-cover','medium-cloud-cover','low-cloud-cover']
+					cloud_forecast_payloads = {'items':[]}
+					for cloud_parameter in cloud_forecast_list:
+						cloud_payload={
+								'coords':coords,
+								'crs':'crs84',
+								'parameter':cloud_parameter
+								}
+						cloud_forecast_payloads['items'].append(cloud_payload)
+					cloud_forecast_data = ApiFetcher.fetch_data(forecast_url, cloud_forecast_payloads)
+					value_list1 = cloud_forecast_data['results'][0]['values']
+					value_list2 = cloud_forecast_data['results'][1]['values']
+					value_list3 = cloud_forecast_data['results'][2]['values']
+					averaged_list = [round((x + y + z) / 3, 1) for x, y, z in zip(value_list1, value_list2, value_list3)]
+					average_forecast_cloud_data = {'timestamps':cloud_forecast_data['results'][0]['timestamps'], 'values':averaged_list}
+					plot_data(weather_data=cloud_data,
+							  forecast_data=average_forecast_cloud_data,
+							  plot_type=tab_data[idx]['plot_type'],
+							  y_axis_label=tab_data[idx]['y_axis_label'],
+							  title=tab_data[idx]['title'])
+				else:
+					plot_data(weather_data={'timestamps':weather_data['results'][idx]['timestamps'], 'values':weather_data['results'][idx]['values']},
+							  forecast_data={'timestamps':forecast_data['results'][idx]['timestamps'], 'values':forecast_data['results'][idx]['values']},
+							  plot_type=tab_data[idx]['plot_type'],
+							  y_axis_label=tab_data[idx]['y_axis_label'],
+							  title=tab_data[idx]['title'])

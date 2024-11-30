@@ -17,11 +17,10 @@ def plot_weather_data(x_axis:list, y_axis:list, plot_type:str, y_axis_label:str,
 
 	if plot_type in plot_functions:
 		fig = plot_functions[plot_type](x=x_axis, y=y_axis, title=title)
-		fig.update_layout(yaxis_title=y_axis_label, xaxis_title="")
+		fig.update_layout(yaxis_title=y_axis_label, xaxis_title="Time (UTC)")
 		st.plotly_chart(fig)
 	else:
 		st.error(f"Unsupported plot type: {plot_type}")
-
 
 def show():
 	### Variables ###
@@ -33,9 +32,9 @@ def show():
 	st.title('Weather Data')	
 	col1, col2, col3 = st.columns(3)
 	with col1:
-		start_date = st.date_input('From Date', datetime.today()-timedelta(days=1), min_value=datetime(2000, 1, 1)).isoformat()
+		start_date = st.date_input('From Date', datetime.today()-timedelta(days=1), min_value=datetime(2000, 1, 1))
 	with col2:
-		end_date = st.date_input('To Date', datetime.today(), min_value=datetime(2000, 1, 1)).isoformat()
+		end_date = st.date_input('To Date', datetime.today(), min_value=datetime(2000, 1, 1))
 	with col3:
 		resolution = st.selectbox('Choose a resolution', resolutions)
 
@@ -57,26 +56,30 @@ def show():
 	### Interface ###
 	payloads = []
 	if st.button('Request Data'):
-		with st.spinner("Fetching historical data... Please wait."):
-			for tab in tab_data:
-				payload={
-						'parameter':tab['parameter'],
-						'limit': data_limit,
-						'resolution': resolution,
-						'time_from': start_date,
-						'time_to': end_date
-						}
-				payloads.append(payload)				
-			weather_payload ={}
-			weather_payload['items'] = payloads
-			weather_data = apiFetcher.fetch_data(weather_url, weather_payload)		
-
-			for idx, tab in enumerate(tabs):
-				with tab:
-					st.header(tab_data[idx]['header'])
-					x_axis = weather_data["results"][idx]['timestamps']
-					y_axis = weather_data["results"][idx]['values']
-					plot_type = tab_data[idx]["plot_type"]
-					y_axis_label = tab_data[idx]["y_axis_label"]
-					title = tab_data[idx]["title"]
-					plot_weather_data(x_axis, y_axis, plot_type, y_axis_label, title)
+		if end_date > datetime.today().date():
+			st.error('Cannot fetch future data')
+		elif start_date > end_date:
+			st.error('Cannot have a **From** date past the **To** date')
+		else:
+			with st.spinner("Fetching historical data... Please wait."):
+				for tab in tab_data:
+					payload={
+							'parameter':tab['parameter'],
+							'limit': data_limit,
+							'resolution': resolution,
+							'time_from': start_date.isoformat(),
+							'time_to': end_date.isoformat()
+							}
+					payloads.append(payload)				
+				weather_payload ={}
+				weather_payload['items'] = payloads
+				weather_data = apiFetcher.fetch_data(weather_url, weather_payload)
+				for idx, tab in enumerate(tabs):
+					with tab:
+						st.header(tab_data[idx]['header'])
+						x_axis = weather_data["results"][idx]['timestamps']
+						y_axis = weather_data["results"][idx]['values']
+						plot_type = tab_data[idx]["plot_type"]
+						y_axis_label = tab_data[idx]["y_axis_label"]
+						title = tab_data[idx]["title"]
+						plot_weather_data(x_axis, y_axis, plot_type, y_axis_label, title)
