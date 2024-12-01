@@ -10,8 +10,16 @@ class ApiFetcher:
 			response = requests.post(url, json=payload)
 			response.raise_for_status()
 			return response.json()	
+		except requests.exceptions.RequestException as http_err:
+			return {
+				"error": f"HTTP error occurred: {http_err}",
+				"status_code": http_err.response.status_code
+				}
 		except requests.exceptions.RequestException as e:
-			return f'API fetch error: {e}'
+			return {
+				"error": f"API fetch error: {e}",
+				"status_code": 500  # Default code for non-HTTP errors
+				}
 
 
 ### TEST AREA ###

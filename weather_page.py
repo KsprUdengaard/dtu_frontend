@@ -16,7 +16,7 @@ def plot_weather_data(x_axis:list, y_axis:list, plot_type:str, y_axis_label:str,
 	}
 
 	if plot_type in plot_functions:
-		fig = plot_functions[plot_type](x=x_axis, y=y_axis, title=title)
+		fig = plot_functions[plot_type](x=x_axis, y=y_axis, title=title, labels={'timestamps':'Time (UTC)','values':y_axis_label})
 		fig.update_layout(yaxis_title=y_axis_label, xaxis_title="Time (UTC)")
 		st.plotly_chart(fig)
 	else:
