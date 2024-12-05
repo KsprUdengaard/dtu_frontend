@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import about_page
 import weather_page
-import energy_page
+import ml_page
 import prediction_page
 
 def footer(message):
@@ -30,14 +30,14 @@ def footer(message):
 def main()->None:
     ### Navigation in the sidebar ###
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["About", "Historical Weather Data", "Energy Data", "Forecast Data"])
+    page = st.sidebar.radio("Go to", ["About", "Historical Weather Data", "Model Parameters", "Forecast Data"])
     
     if page == "About":
         about_page.show()
     elif page == "Historical Weather Data":
         weather_page.show()
-    elif page == "Energy Data":
-        energy_page.show()
+    elif page == "Model Parameters":
+        ml_page.show()
     elif page == "Forecast Data":
         prediction_page.show()
 

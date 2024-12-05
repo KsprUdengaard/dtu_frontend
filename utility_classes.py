@@ -1,13 +1,14 @@
 import pandas as pd
 import requests
+from typing import Dict, Any
 from datetime import datetime, timedelta
 from abc import ABC, abstractmethod
 
 class ApiFetcher:
 	@staticmethod
-	def fetch_data(url:str, payload:dict)->dict:	
+	def fetch_data(url:str, payload:dict, method:str='get')->dict[str:any]:	
 		try:
-			response = requests.post(url, json=payload)
+			response = getattr(requests, method.lower())(url, json=payload)
 			response.raise_for_status()
 			return response.json()	
 		except requests.exceptions.RequestException as http_err:

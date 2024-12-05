@@ -90,7 +90,7 @@ def show():
 					forecast_data['SpotPriceDKK']
 					spot_price_df = pd.DataFrame.from_dict(forecast_data['SpotPriceDKK'], orient='index', columns=['SpotPriceDKK']).reset_index()
 					spot_price_df.rename(columns={'index':'HourUTC'}, inplace=True)
-					fig = px.bar(
+					fig = px.line(
 								spot_price_df,
 								x='HourUTC',
 								y='SpotPriceDKK',
