@@ -41,7 +41,7 @@ def show():
 	resolutions = 'hour'	
 	data_limit = 120
 	forecast_url = 'http://127.0.0.1:8000/forecast'
-	coords = 'POINT(9.5 56.0)'
+	coords = 'POINT(11.7644 55.9594)'
 	tab_data = [
 		{"title": "Acc precipitation", "parameter": "acc_precip",'edr_parameter':'total-precipitation', "y_axis_label": "Precipitation [mm]", "plot_type": "bar"},
    		{"title": "Cloud cover","parameter": "mean_cloud_cover",'edr_parameter':'low-cloud-cover',"y_axis_label": "Cloud cover [%]","plot_type": "line"},

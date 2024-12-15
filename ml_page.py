@@ -30,7 +30,7 @@ def show():
 				   'max_depth':max_depth_slider,
 				   'subsample':subsample_slider,
 				   'min_child_weight':min_child_weight_slider}
-		response = ApiFetcher.fetch_data(model_url, payload, 'post')
+		response = apiFetcher.fetch_data(model_url, payload, 'post')
 
 		data = {
 		    "Metric": ["RMSE", "MAE", "R²", "RSD%"],

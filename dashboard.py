@@ -52,8 +52,7 @@ def main()->None:
             data = response.json()
             footer(data['message'])
     except requests.exceptions.RequestException as e:
-        footer(f'Lost connection to API')
-
+        footer(f'Lost connection to API: {e}')
 
 if __name__ == "__main__":
     main()
