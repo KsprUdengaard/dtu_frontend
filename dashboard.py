@@ -42,7 +42,7 @@ def main()->None:
         prediction_page.show()
 
     ### Footer ###
-    api_url = "http://127.0.0.1:8000"
+    api_url = "https://dtu-fastapi.onrender.com"
     try:
         response = requests.get(api_url)
         if response.status_code == 200:

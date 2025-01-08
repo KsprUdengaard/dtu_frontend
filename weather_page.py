@@ -24,7 +24,7 @@ def plot_weather_data(x_axis:list, y_axis:list, plot_type:str, y_axis_label:str,
 
 def show():
 	### Variables ###
-	weather_url = "http://127.0.0.1:8000/weather"
+	weather_url = "https://dtu-fastapi.onrender.com/weather"
 	resolutions = ['hour', 'day', 'month', 'year']	
 	data_limit = 1000
 	

@@ -37,10 +37,10 @@ def plot_data(weather_data:dict, forecast_data:dict, plot_type:str, y_axis_label
 def show():
 
 	### Variables ###
-	weather_url = "http://127.0.0.1:8000/weather"
+	weather_url = "https://dtu-fastapi.onrender.com/weather"
 	resolutions = 'hour'	
 	data_limit = 120
-	forecast_url = 'http://127.0.0.1:8000/forecast'
+	forecast_url = 'https://dtu-fastapi.onrender.com/forecast'
 	coords = 'POINT(11.7644 55.9594)'
 	tab_data = [
 		{"title": "Acc precipitation", "parameter": "acc_precip",'edr_parameter':'total-precipitation', "y_axis_label": "Precipitation [mm]", "plot_type": "bar"},

@@ -7,7 +7,7 @@ def show():
 	### Variables ###
 	
 	apiFetcher = ApiFetcher()
-	model_url = "http://127.0.0.1:8000/model"
+	model_url = "https://dtu-fastapi.onrender.com/model"
 
 	### UI ###
 	st.title('Model Parameters')
